@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NightX Client</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2b2b2b;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #5c2b5c;
+            padding: 20px;
+            text-align: center;
+            font-size: 2em;
+            color: #fff;
+        }
+        main {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .section {
+            width: 100%;
+            background-color: #3a3a3a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+            max-height: 1000px; /* Adjusted for more space */
+            overflow-y: auto;
+        }
+        .section h2 {
+            border-bottom: 2px solid #5c2b5c;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        .artifact, .release {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #4a4a4a;
+            border-radius: 5px;
+        }
+        .artifact a, .release a {
+            color: #9a4cae;
+            text-decoration: none;
+            float: left; /* Added to float left */
+        }
+        .artifact a:hover, .release a:hover {
+            text-decoration: underline;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: #424549;
+            color: white;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            word-wrap: break-word; /* Added for word wrap */
+            white-space: normal; /* Added for normal white space */
+        }
+        tr {
+            border-bottom: 1px solid #36393e;
+        }
+        th {
+            background-color: #282b30;
+        }
+        .space {
+            height: 50px;
+        }
+        .mdui-spinner {
+            color: #424549;
+        }
+        .donate-button {
+            display: block;
+            width: 100%;
+            max-width: 150px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #5c2b5c;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+        }
+        .donate-button:hover {
+            background-color: #7d3f7d;
+        }
+        #download-count {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        @media (min-width: 768px) {
+            main {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            .section {
+                width: 45%;
+            }
+        }
+    </style>
+<link rel="stylesheet" type="text/css" href="css/font-awesome.min.css">
+</head>
+<body>
+    <header>
+        NightX Client - A Minecraft Forge Mixin-Based Hacked Client
+    </header>
+    <div id="download-count">Total Downloads: Waiting...</div>
+    <a href="https://github.com" class="donate-button">Donate Now!</a>
+    <main>
+        <div class="section" id="artifacts-section">
+            <h2>Beta</h2>
+            <div class="space" id="loading-badge">
+                <div class="mdui-spinner"></div>
+            </div>
+            <table class="mdui-table mdui-hoverable">
+                <thead>
+                    <tr>
+                        <th>Commit</th>
+                        <th>Date</th>
+                        <th>Builds</th>
+                        <th>ChangeLogs</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody">
+                </tbody>
+            </table>
+        </div>
+        <div class="section" id="releases-section">
+            <h2>Releases</h2>
+            <!-- Releases will be dynamically inserted here -->
+        </div>
+    </main>
+
+<script src="js/jquery-3.6.0.min.js"></script>
+    <script>
+        const clientId = '902287';
+        const clientSecret = 'e5e108ea24a8bbb2b8243643b48970ffc51838d1';
+
+        var verJson = [];
+
+        function addVer(sha, time, msg, artifact_id, branch) {
+            if (branch == "main") {
+                branch = "stable";
+            }
+            verJson.push({
+                link: "https://github.com/Aspw-w/NightX-Client/commit/" + sha,
+                sha: sha,
+                time: new Date(time),
+                msg: msg,
+                download_link: "https://nightly.link/Aspw-w/NightX-Client/actions/runs/" + artifact_id + "/nightx.zip",
+                branch: branch
+            });
+            refresh();
+        }
+
+        function refresh() {
+            $('#loading-badge').html("");
+            $("#tbody").html("");
+            verJson.sort(function(a, b) {
+                return b.time.getTime() - a.time.getTime();
+            }).forEach(element => {
+                $("#tbody").append(`<tr>` + 
+                    `<td><a href="${element.link}" style="color:#FFFFFF"> ${element.sha.substring(0, 7)}</a></td>` +
+                    `<td>${element.time.toLocaleString()}</td>` +
+                    `<td><a href="${element.download_link}" style="color:#7289da">Download</a></td>` + 
+                    `<td>${element.msg}</td>` + 
+                `</tr>`);
+            });
+        }
+
+        async function fetchWorkflowRuns() {
+            let page = 1;
+            let hasMorePages = true;
+
+            while (hasMorePages) {
+                const response = await fetch(`https://api.github.com/repos/Aspw-w/NightX-Client/actions/runs?per_page=100&page=${page}&client_id=${clientId}&client_secret=${clientSecret}`);
+                const data = await response.json();
+
+                if (data.workflow_runs.length > 0) {
+                    data.workflow_runs.forEach(element => {
+                        addVer(element.head_commit.id, element.head_commit.timestamp, element.head_commit.message, element.id, element.head_branch);
+                    });
+                    page++;
+                } else {
+                    hasMorePages = false;
+                }
+            }
+        }
+
+        async function fetchReleases() {
+            const releasesSection = document.getElementById('releases-section');
+            let page = 1;
+            let hasMorePages = true;
+
+            while (hasMorePages) {
+                const response = await fetch(`https://api.github.com/repos/Aspw-w/NightX-Client/releases?per_page=100&page=${page}&client_id=${clientId}&client_secret=${clientSecret}`);
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    data.forEach(release => {
+                        const releaseDiv = document.createElement('div');
+                        releaseDiv.className = 'release';
+                        releaseDiv.innerHTML = `
+                            <strong>${release.name}</strong> (${new Date(release.published_at).toLocaleDateString()})<br>
+                            <a href="${release.html_url}" target="_blank">View Release</a><br>
+                            <span>Download Count: ${release.assets.reduce((acc, asset) => acc + asset.download_count, 0)}</span>
+                        `;
+                        releasesSection.appendChild(releaseDiv);
+                    });
+                    page++;
+                } else {
+                    hasMorePages = false;
+                }
+            }
+        }
+
+        async function fetchDownloadCount() {
+            let totalDownloads = 0;
+            let page = 1;
+            let hasMorePages = true;
+
+            while (hasMorePages) {
+                const response = await fetch(`https://api.github.com/repos/Aspw-w/NightX-Client/releases?per_page=100&page=${page}&client_id=${clientId}&client_secret=${clientSecret}`);
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    for (const release of data) {
+                        for (const asset of release.assets) {
+                            totalDownloads += asset.download_count;
+                        }
+                    }
+                    page++;
+                } else {
+                    hasMorePages = false;
+                }
+            }
+
+            document.getElementById('download-count').innerText = `Total Downloads: ${totalDownloads} (Thanks for 75k+ Downloads!)`;
+        }
+
+        fetchDownloadCount();
+        fetchWorkflowRuns();
+        fetchReleases();
+    </script>
+</body>
+</html>
